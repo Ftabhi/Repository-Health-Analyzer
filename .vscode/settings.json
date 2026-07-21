@@ -1,0 +1,8 @@
+{
+  "python.defaultInterpreterPath": "C:\\Users\\LENOVO\\gitfolder\\.venv\\Scripts\\python.exe",
+  "python.terminal.activateEnvironment": true,
+  "terminal.integrated.env.windows": {
+    "PATH": "${workspaceFolder}\\.venv\\Scripts;${workspaceFolder};${env:PATH}"
+  }
+}
+
