@@ -1772,7 +1772,6 @@ def main() -> None:
         try:
             selected_repository = _analyze_repository(repository_url, stage_container)
             st.session_state["selected_repository"] = selected_repository
-            st.session_state["sidebar_repo_selectbox"] = selected_repository
 
             if "repository_url_input" in st.session_state:
                 st.session_state["repository_url_input"] = ""
