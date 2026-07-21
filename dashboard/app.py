@@ -1769,7 +1769,7 @@ def main() -> None:
 
     selected_repository = st.session_state.get("selected_repository", "")
 
-if analyze_button:
+    if analyze_button:
     try:
         selected_repository = _analyze_repository(repository_url, stage_container)
         st.session_state["selected_repository"] = selected_repository
@@ -1820,13 +1820,13 @@ if analyze_button:
         st.session_state.pop("selected_repository", None)
         st.session_state.pop("sidebar_repo_selectbox", None)
 
-if selected_repository:
-    with st.spinner("Loading analytics…"):
-        try:
-            _render_dashboard_for_repository(selected_repository)
-        except Exception as exc:
-            st.error(f"Unable to render dashboard: {exc}")
-else:
+    if selected_repository:
+        with st.spinner("Loading analytics…"):
+            try:
+                _render_dashboard_for_repository(selected_repository)
+            except Exception as exc:
+                st.error(f"Unable to render dashboard: {exc}")
+    else:
     st.markdown(
         """
         ...
