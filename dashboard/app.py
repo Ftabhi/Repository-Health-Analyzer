@@ -1768,102 +1768,71 @@ def main() -> None:
         st.rerun()
 
     selected_repository = st.session_state.get("selected_repository", "")
-    if analyze_button:
+
+if analyze_button:
+    try:
+        selected_repository = _analyze_repository(repository_url, stage_container)
+        st.session_state["selected_repository"] = selected_repository
+
+        st.cache_data.clear()
+        st.success(f"✓ Analysis complete for {selected_repository}.")
+        st.rerun()
+
+    except ValueError as exc:
+        _reset_stage_statuses(stage_container, "Validating repository", "failed")
+        st.error(str(exc))
+        selected_repository = ""
+        st.session_state.pop("selected_repository", None)
+        st.session_state.pop("sidebar_repo_selectbox", None)
+
+    except GitHubNotFoundError:
+        _reset_stage_statuses(stage_container, "Validating repository", "failed")
+        st.error("Repository not found on GitHub. Please verify the URL.")
+        selected_repository = ""
+        st.session_state.pop("selected_repository", None)
+        st.session_state.pop("sidebar_repo_selectbox", None)
+
+    except GitHubRateLimitError:
+        _reset_stage_statuses(stage_container, "Fetching repository metadata", "failed")
+        st.error("GitHub API rate limit reached. Please wait and try again.")
+        selected_repository = ""
+        st.session_state.pop("selected_repository", None)
+        st.session_state.pop("sidebar_repo_selectbox", None)
+
+    except GitHubPrivateRepositoryError:
+        _reset_stage_statuses(stage_container, "Fetching repository metadata", "failed")
+        st.error("Unable to access repository. It may be private or require different credentials.")
+        selected_repository = ""
+        st.session_state.pop("selected_repository", None)
+        st.session_state.pop("sidebar_repo_selectbox", None)
+
+    except GitHubAPIError as exc:
+        _reset_stage_statuses(stage_container, "Fetching repository metadata", "failed")
+        st.error(f"GitHub API error: {exc}")
+        selected_repository = ""
+        st.session_state.pop("selected_repository", None)
+        st.session_state.pop("sidebar_repo_selectbox", None)
+
+    except (DataStorageError, DataCleaningError, AnalyticsError, HealthScoreError) as exc:
+        _reset_stage_statuses(stage_container, "Running analytics", "failed")
+        st.error(f"Repository analysis failed: {exc}")
+        selected_repository = ""
+        st.session_state.pop("selected_repository", None)
+        st.session_state.pop("sidebar_repo_selectbox", None)
+
+if selected_repository:
+    with st.spinner("Loading analytics…"):
         try:
-            selected_repository = _analyze_repository(repository_url, stage_container)
-            st.session_state["selected_repository"] = selected_repository
-
-            if "repository_url_input" in st.session_state:
-                st.session_state["repository_url_input"] = ""
-
-            st.cache_data.clear()
-            st.success(f"✓ Analysis complete for {selected_repository}.")
-            st.rerun()
-
-        except ValueError as exc:
-            _reset_stage_statuses(stage_container, "Validating repository", "failed")
-            st.error(str(exc))
-            selected_repository = ""
-            st.session_state.pop("selected_repository", None)
-            st.session_state.pop("sidebar_repo_selectbox", None)
-
-        except GitHubNotFoundError:
-            _reset_stage_statuses(stage_container, "Validating repository", "failed")
-            st.error("Repository not found on GitHub. Please verify the URL.")
-            selected_repository = ""
-            st.session_state.pop("selected_repository", None)
-            st.session_state.pop("sidebar_repo_selectbox", None)
-
-        except GitHubRateLimitError:
-            _reset_stage_statuses(stage_container, "Fetching repository metadata", "failed")
-            st.error("GitHub API rate limit reached. Please wait and try again.")
-            selected_repository = ""
-            st.session_state.pop("selected_repository", None)
-            st.session_state.pop("sidebar_repo_selectbox", None)
-
-        except GitHubPrivateRepositoryError:
-            _reset_stage_statuses(stage_container, "Fetching repository metadata", "failed")
-            st.error("Unable to access repository. It may be private or require different credentials.")
-            selected_repository = ""
-            st.session_state.pop("selected_repository", None)
-            st.session_state.pop("sidebar_repo_selectbox", None)
-
-        except GitHubAPIError as exc:
-            _reset_stage_statuses(stage_container, "Fetching repository metadata", "failed")
-            st.error(f"GitHub API error: {exc}")
-            selected_repository = ""
-            st.session_state.pop("selected_repository", None)
-            st.session_state.pop("sidebar_repo_selectbox", None)
-
-        except (DataStorageError, DataCleaningError, AnalyticsError, HealthScoreError) as exc:
-            _reset_stage_statuses(stage_container, "Running analytics", "failed")
-            st.error(f"Repository analysis failed: {exc}")
-            selected_repository = ""
-            st.session_state.pop("selected_repository", None)
-            st.session_state.pop("sidebar_repo_selectbox", None)
-
-    if selected_repository:
-        with st.spinner("Loading analytics…"):
-            try:
-                _render_dashboard_for_repository(selected_repository)
-            except Exception as exc:
-                st.error(f"Unable to render dashboard: {exc}")
-    else:
-        st.markdown(
-            """
-            <div class='welcome-panel'>
-                <span class='welcome-icon'>📊</span>
-                <h2>GitHub Repository Health Analyzer</h2>
-                <p class='welcome-subtitle'>
-                    Get deep engineering analytics, repository health grades, team velocity indicators,
-                    and actionable insights — all in one premium dashboard.
-                </p>
-                <div class='welcome-features'>
-                    <div class='feature-item'>
-                        <span class='feature-icon'>⚡</span>
-                        <strong>Executive KPIs</strong>
-                        <span>Instantly view commits, contributors, stars, forks, and age — side-by-side.</span>
-                    </div>
-                    <div class='feature-item'>
-                        <span class='feature-icon'>🧠</span>
-                        <strong>Repository Intelligence</strong>
-                        <span>Objective health grades from activity, community, maintenance, and popularity signals.</span>
-                    </div>
-                    <div class='feature-item'>
-                        <span class='feature-icon'>💡</span>
-                        <strong>Engineering Insights</strong>
-                        <span>Auto-detected bottlenecks, PR backlogs, and release cadence patterns.</span>
-                    </div>
-                </div>
-                <div class='welcome-instruction'>
-                    👉 Select an existing repository from <strong>Switch Repository</strong> in the sidebar,
-                    or paste a GitHub URL to start a new analysis.
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
+            _render_dashboard_for_repository(selected_repository)
+        except Exception as exc:
+            st.error(f"Unable to render dashboard: {exc}")
+else:
+    st.markdown(
+        """
+        ...
+        """,
+        unsafe_allow_html=True,
+    )
 
 if __name__ == "__main__":
     main()
