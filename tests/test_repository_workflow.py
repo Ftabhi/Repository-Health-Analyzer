@@ -624,13 +624,15 @@ def test_render_dashboard_for_repository_displays_warning_on_empty_data(monkeypa
     assert "nonexistent/repo" in warning_messages[0]
 
 
-def test_render_sidebar_quick_examples_html_copy_rows(monkeypatch) -> None:
-    """Verify that _QUICK_EXAMPLES contains 10 target repositories and render_sidebar renders rows cleanly."""
+def test_render_sidebar_quick_examples_custom_component(monkeypatch) -> None:
+    """Verify that _QUICK_EXAMPLES contains 10 target repositories and components.html is called."""
     import streamlit as st
+    import streamlit.components.v1 as components
     from dashboard.sidebar import render_sidebar, _QUICK_EXAMPLES
 
-    markdown_calls = []
-    monkeypatch.setattr(st.sidebar, "markdown", lambda content, **kwargs: markdown_calls.append(content))
+    component_calls = []
+    monkeypatch.setattr(components, "html", lambda html_code, **kwargs: component_calls.append(html_code))
+    monkeypatch.setattr(st.sidebar, "markdown", lambda content, **kwargs: None)
     monkeypatch.setattr(st.sidebar, "button", lambda label, **kwargs: False)
     monkeypatch.setattr(st.sidebar, "text_input", lambda label, **kwargs: "")
     monkeypatch.setattr(st.sidebar, "selectbox", lambda label, options, **kwargs: options[0])
@@ -641,15 +643,20 @@ def test_render_sidebar_quick_examples_html_copy_rows(monkeypatch) -> None:
     repo_url, analyze_btn, selected_repo = render_sidebar([])
 
     assert len(_QUICK_EXAMPLES) == 10
-    assert "https://github.com/microsoft/vscode" in _QUICK_EXAMPLES
+    names = [name for name, url in _QUICK_EXAMPLES]
+    urls = [url for name, url in _QUICK_EXAMPLES]
+    assert "microsoft/vscode" in names
+    assert "https://github.com/microsoft/vscode" in urls
     assert repo_url == ""
     assert analyze_btn is False
     assert "repository_url_input" not in session_state
 
-    # Check that copyRepoUrl script and URLs are present in markdown output
-    rendered_text = "".join(markdown_calls)
-    assert "copyRepoUrl" in rendered_text
-    assert "https://github.com/microsoft/vscode" in rendered_text
+    # Check component html payload
+    assert len(component_calls) == 1
+    rendered_html = component_calls[0]
+    assert "navigator.clipboard.writeText" in rendered_html
+    assert "https://github.com/microsoft/vscode" in rendered_html
+
 
 
 

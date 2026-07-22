@@ -3,19 +3,142 @@
 from typing import List, Tuple
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 _QUICK_EXAMPLES = [
-    "https://github.com/microsoft/vscode",
-    "https://github.com/facebook/react",
-    "https://github.com/torvalds/linux",
-    "https://github.com/streamlit/streamlit",
-    "https://github.com/openai/openai-python",
-    "https://github.com/pallets/flask",
-    "https://github.com/fastapi/fastapi",
-    "https://github.com/django/django",
-    "https://github.com/tensorflow/tensorflow",
-    "https://github.com/pytorch/pytorch",
+    ("microsoft/vscode", "https://github.com/microsoft/vscode"),
+    ("facebook/react", "https://github.com/facebook/react"),
+    ("torvalds/linux", "https://github.com/torvalds/linux"),
+    ("streamlit/streamlit", "https://github.com/streamlit/streamlit"),
+    ("openai/openai-python", "https://github.com/openai/openai-python"),
+    ("fastapi/fastapi", "https://github.com/fastapi/fastapi"),
+    ("pallets/flask", "https://github.com/pallets/flask"),
+    ("django/django", "https://github.com/django/django"),
+    ("tensorflow/tensorflow", "https://github.com/tensorflow/tensorflow"),
+    ("pytorch/pytorch", "https://github.com/pytorch/pytorch"),
 ]
+
+
+def render_clipboard_quick_examples(examples: List[Tuple[str, str]]) -> None:
+    """Render an isolated custom Streamlit component for clipboard copying of example URLs."""
+    rows_html = []
+    for name, url in examples:
+        rows_html.append(f"""
+        <div class="row">
+            <span class="repo-name" title="{url}">{name}</span>
+            <button class="copy-btn" onclick="copyUrl('{url}', this)" title="Copy {url}">📋</button>
+        </div>
+        """)
+
+    component_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            * {{
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }}
+            body {{
+                background-color: transparent;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                color: #c9d1d9;
+                padding: 0 2px;
+            }}
+            .container {{
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            }}
+            .row {{
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                background: rgba(22, 27, 34, 0.7);
+                border: 1px solid #30363d;
+                border-radius: 6px;
+                padding: 6px 10px;
+                transition: all 0.2s ease;
+            }}
+            .row:hover {{
+                border-color: #58a6ff;
+                background: rgba(33, 38, 45, 0.9);
+            }}
+            .repo-name {{
+                font-size: 0.82rem;
+                font-weight: 500;
+                color: #c9d1d9;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }}
+            .copy-btn {{
+                background: transparent;
+                border: none;
+                color: #8b949e;
+                font-size: 0.9rem;
+                cursor: pointer;
+                padding: 2px 6px;
+                border-radius: 4px;
+                transition: all 0.2s ease;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }}
+            .copy-btn:hover {{
+                color: #58a6ff;
+                background: rgba(88, 166, 255, 0.12);
+                transform: scale(1.1);
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            {"".join(rows_html)}
+        </div>
+        <script>
+            function copyUrl(url, btn) {{
+                if (navigator.clipboard && navigator.clipboard.writeText) {{
+                    navigator.clipboard.writeText(url).then(function() {{
+                        showFeedback(btn);
+                    }}).catch(function() {{
+                        fallbackCopy(url, btn);
+                    }});
+                }} else {{
+                    fallbackCopy(url, btn);
+                }}
+            }}
+            function fallbackCopy(url, btn) {{
+                var ta = document.createElement("textarea");
+                ta.value = url;
+                ta.style.position = "fixed";
+                ta.style.left = "-9999px";
+                document.body.appendChild(ta);
+                ta.select();
+                try {{
+                    document.execCommand("copy");
+                    showFeedback(btn);
+                }} catch(e) {{}}
+                document.body.removeChild(ta);
+            }}
+            function showFeedback(btn) {{
+                var orig = btn.innerText;
+                btn.innerText = "✓";
+                btn.style.color = "#3fb950";
+                setTimeout(function() {{
+                    btn.innerText = orig;
+                    btn.style.color = "";
+                }}, 1500);
+            }}
+        </script>
+    </body>
+    </html>
+    """
+
+    height = len(examples) * 34 + 8
+    components.html(component_html, height=height, scrolling=False)
 
 
 def render_sidebar(discovered_repos: List[str]) -> Tuple[str, bool, str]:
@@ -80,53 +203,8 @@ def render_sidebar(discovered_repos: List[str]) -> Tuple[str, bool, str]:
         unsafe_allow_html=True,
     )
 
-    rows_html = """
-    <script>
-    if (typeof window.copyRepoUrl === 'undefined') {
-        window.copyRepoUrl = function(btn, text) {
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(text).then(function() {
-                    showCopiedStatus(btn);
-                }).catch(function() {
-                    fallbackCopyUrl(btn, text);
-                });
-            } else {
-                fallbackCopyUrl(btn, text);
-            }
-        };
-        window.fallbackCopyUrl = function(btn, text) {
-            var dummy = document.createElement("textarea");
-            document.body.appendChild(dummy);
-            dummy.value = text;
-            dummy.select();
-            document.execCommand("copy");
-            document.body.removeChild(dummy);
-            showCopiedStatus(btn);
-        };
-        window.showCopiedStatus = function(btn) {
-            var origText = btn.innerHTML;
-            btn.innerHTML = "✓ Copied!";
-            btn.classList.add("copied");
-            setTimeout(function() {
-                btn.innerHTML = origText;
-                btn.classList.remove("copied");
-            }, 1500);
-        };
-    }
-    </script>
-    <div class="example-rows-container">
-    """
-
-    for url in _QUICK_EXAMPLES:
-        rows_html += f"""
-        <div class="example-row">
-            <span class="example-row-url" title="{url}">📋 {url}</span>
-            <button class="copy-btn" onclick="copyRepoUrl(this, '{url}')">📄 Copy</button>
-        </div>
-        """
-
-    rows_html += "</div>"
-    st.sidebar.markdown(rows_html, unsafe_allow_html=True)
+    with st.sidebar:
+        render_clipboard_quick_examples(_QUICK_EXAMPLES)
 
     st.sidebar.markdown("<hr class='sidebar-divider'>", unsafe_allow_html=True)
 
