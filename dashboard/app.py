@@ -176,30 +176,60 @@ def _configure_page() -> None:
         }
 
         /* Example repo pills */
-        .example-repos {
+        .example-rows-container {
             display: flex;
             flex-direction: column;
             gap: 6px;
             margin-top: 8px;
         }
-        .example-repo-pill {
-            display: inline-flex;
+        .example-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(22, 27, 34, 0.7);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 6px 10px;
+            gap: 8px;
+            transition: var(--transition);
+        }
+        .example-row:hover {
+            border-color: rgba(88, 166, 255, 0.3);
+            background: rgba(33, 38, 45, 0.9);
+        }
+        .example-row-url {
+            font-size: 0.74rem;
+            font-family: var(--font-stack);
+            color: var(--text-color);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: flex;
             align-items: center;
             gap: 6px;
-            padding: 5px 10px;
-            background: rgba(88,166,255,0.06);
-            border: 1px solid rgba(88,166,255,0.12);
-            border-radius: 6px;
-            color: var(--accent-color);
-            font-size: 0.78rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: var(--transition);
-            text-decoration: none;
         }
-        .example-repo-pill:hover {
-            background: rgba(88,166,255,0.12);
-            border-color: rgba(88,166,255,0.3);
+        .copy-btn {
+            background: linear-gradient(180deg, #21262D 0%, #171B21 100%);
+            color: var(--accent-color);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 3px 9px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: var(--transition);
+            flex-shrink: 0;
+        }
+        .copy-btn:hover {
+            border-color: var(--accent-color);
+            color: #FFFFFF;
+            box-shadow: 0 0 10px rgba(88, 166, 255, 0.2);
+        }
+        .copy-btn.copied {
+            background: rgba(63, 185, 80, 0.15);
+            color: var(--success-color);
+            border-color: rgba(63, 185, 80, 0.4);
         }
 
         /* ============================================================

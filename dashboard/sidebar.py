@@ -5,18 +5,16 @@ from typing import List, Tuple
 import streamlit as st
 
 _QUICK_EXAMPLES = [
-    ("microsoft/vscode", "https://github.com/microsoft/vscode"),
-    ("facebook/react", "https://github.com/facebook/react"),
-    ("torvalds/linux", "https://github.com/torvalds/linux"),
-    ("streamlit/streamlit", "https://github.com/streamlit/streamlit"),
-    ("tensorflow/tensorflow", "https://github.com/tensorflow/tensorflow"),
-    ("pytorch/pytorch", "https://github.com/pytorch/pytorch"),
-    ("django/django", "https://github.com/django/django"),
-    ("pallets/flask", "https://github.com/pallets/flask"),
-    ("fastapi/fastapi", "https://github.com/fastapi/fastapi"),
-    ("microsoft/typescript", "https://github.com/microsoft/typescript"),
-    ("kubernetes/kubernetes", "https://github.com/kubernetes/kubernetes"),
-    ("apache/spark", "https://github.com/apache/spark"),
+    "https://github.com/microsoft/vscode",
+    "https://github.com/facebook/react",
+    "https://github.com/torvalds/linux",
+    "https://github.com/streamlit/streamlit",
+    "https://github.com/openai/openai-python",
+    "https://github.com/pallets/flask",
+    "https://github.com/fastapi/fastapi",
+    "https://github.com/django/django",
+    "https://github.com/tensorflow/tensorflow",
+    "https://github.com/pytorch/pytorch",
 ]
 
 
@@ -82,22 +80,53 @@ def render_sidebar(discovered_repos: List[str]) -> Tuple[str, bool, str]:
         unsafe_allow_html=True,
     )
 
-    clicked_example_url = None
-    cols = st.sidebar.columns(2)
-    for idx, (name, url) in enumerate(_QUICK_EXAMPLES):
-        col = cols[idx % 2]
-        if col.button(
-            f"⬡ {name}",
-            key=f"btn_example_{idx}",
-            use_container_width=True,
-            help=f"Analyze {name}",
-        ):
-            clicked_example_url = url
+    rows_html = """
+    <script>
+    if (typeof window.copyRepoUrl === 'undefined') {
+        window.copyRepoUrl = function(btn, text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(function() {
+                    showCopiedStatus(btn);
+                }).catch(function() {
+                    fallbackCopyUrl(btn, text);
+                });
+            } else {
+                fallbackCopyUrl(btn, text);
+            }
+        };
+        window.fallbackCopyUrl = function(btn, text) {
+            var dummy = document.createElement("textarea");
+            document.body.appendChild(dummy);
+            dummy.value = text;
+            dummy.select();
+            document.execCommand("copy");
+            document.body.removeChild(dummy);
+            showCopiedStatus(btn);
+        };
+        window.showCopiedStatus = function(btn) {
+            var origText = btn.innerHTML;
+            btn.innerHTML = "✓ Copied!";
+            btn.classList.add("copied");
+            setTimeout(function() {
+                btn.innerHTML = origText;
+                btn.classList.remove("copied");
+            }, 1500);
+        };
+    }
+    </script>
+    <div class="example-rows-container">
+    """
 
-    if clicked_example_url:
-        repository_url = clicked_example_url
-        analyze_button = True
-        st.session_state["repository_url_input"] = clicked_example_url
+    for url in _QUICK_EXAMPLES:
+        rows_html += f"""
+        <div class="example-row">
+            <span class="example-row-url" title="{url}">📋 {url}</span>
+            <button class="copy-btn" onclick="copyRepoUrl(this, '{url}')">📄 Copy</button>
+        </div>
+        """
+
+    rows_html += "</div>"
+    st.sidebar.markdown(rows_html, unsafe_allow_html=True)
 
     st.sidebar.markdown("<hr class='sidebar-divider'>", unsafe_allow_html=True)
 

@@ -624,25 +624,14 @@ def test_render_dashboard_for_repository_displays_warning_on_empty_data(monkeypa
     assert "nonexistent/repo" in warning_messages[0]
 
 
-def test_render_sidebar_quick_examples_trigger_analysis(monkeypatch) -> None:
-    """Verify that clicking a Quick Example button returns the example URL and sets analyze_button to True."""
+def test_render_sidebar_quick_examples_html_copy_rows(monkeypatch) -> None:
+    """Verify that _QUICK_EXAMPLES contains 10 target repositories and render_sidebar renders rows cleanly."""
     import streamlit as st
     from dashboard.sidebar import render_sidebar, _QUICK_EXAMPLES
 
-    # Mock sidebar button so that the first example button returns True
-    def mock_button(label, key=None, **kwargs):
-        if key == "btn_example_0":
-            return True
-        return False
-
-    # Create mock columns
-    class MockColumn:
-        def button(self, label, key=None, **kwargs):
-            return mock_button(label, key=key, **kwargs)
-
-    cols = [MockColumn(), MockColumn()]
-    monkeypatch.setattr(st.sidebar, "columns", lambda spec: cols)
-    monkeypatch.setattr(st.sidebar, "button", mock_button)
+    markdown_calls = []
+    monkeypatch.setattr(st.sidebar, "markdown", lambda content, **kwargs: markdown_calls.append(content))
+    monkeypatch.setattr(st.sidebar, "button", lambda label, **kwargs: False)
     monkeypatch.setattr(st.sidebar, "text_input", lambda label, **kwargs: "")
     monkeypatch.setattr(st.sidebar, "selectbox", lambda label, options, **kwargs: options[0])
 
@@ -651,9 +640,16 @@ def test_render_sidebar_quick_examples_trigger_analysis(monkeypatch) -> None:
 
     repo_url, analyze_btn, selected_repo = render_sidebar([])
 
-    expected_url = _QUICK_EXAMPLES[0][1]
-    assert repo_url == expected_url
-    assert analyze_btn is True
-    assert session_state.get("repository_url_input") == expected_url
+    assert len(_QUICK_EXAMPLES) == 10
+    assert "https://github.com/microsoft/vscode" in _QUICK_EXAMPLES
+    assert repo_url == ""
+    assert analyze_btn is False
+    assert "repository_url_input" not in session_state
+
+    # Check that copyRepoUrl script and URLs are present in markdown output
+    rendered_text = "".join(markdown_calls)
+    assert "copyRepoUrl" in rendered_text
+    assert "https://github.com/microsoft/vscode" in rendered_text
+
 
 
