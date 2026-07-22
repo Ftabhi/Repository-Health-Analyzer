@@ -1778,6 +1778,11 @@ def main() -> None:
     _configure_page()
 
     discovered_repos = _discover_repositories()
+
+    # Automatically select the first repository on initial load if repositories exist
+    if "selected_repository" not in st.session_state and discovered_repos:
+        st.session_state["selected_repository"] = sorted(discovered_repos)[0]
+
     repository_url, analyze_button, selected_repo = render_sidebar(discovered_repos)
     stage_container = st.sidebar.container()
 
@@ -1849,7 +1854,39 @@ def main() -> None:
     else:
         st.markdown(
             """
-            ...
+            <div class="welcome-panel">
+                <div class="welcome-icon">📊</div>
+                <h2>Welcome to RepoHealth Analyzer</h2>
+                <p class="welcome-subtitle">
+                    Comprehensive engineering intelligence and health scores for GitHub repositories.
+                    No repository data has been loaded yet.
+                </p>
+                <div class="welcome-instruction">
+                    👈 Paste a public GitHub repository URL in the sidebar (e.g., <code>https://github.com/owner/repo</code>) and click <strong>🚀 Analyze Repository</strong> to generate insights.
+                </div>
+                <div class="welcome-features" style="margin-top: 36px;">
+                    <div class="feature-item">
+                        <span class="feature-icon">📈</span>
+                        <strong>Commit Activity</strong>
+                        <span>Track velocity, commit frequency, and daily contribution trends.</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">👥</span>
+                        <strong>Contributor Health</strong>
+                        <span>Analyze contributor distribution, community churn, and top committer shares.</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">⚡</span>
+                        <strong>Issue & PR Dynamics</strong>
+                        <span>Monitor issue close rates, resolution speed, and open PR backlogs.</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">🛡️</span>
+                        <strong>Health Scoring</strong>
+                        <span>Compute an overarching 0-100 repository health score and letter grade.</span>
+                    </div>
+                </div>
+            </div>
             """,
             unsafe_allow_html=True,
         )

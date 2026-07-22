@@ -36,15 +36,8 @@ def render_sidebar(discovered_repos: List[str]) -> Tuple[str, bool, str]:
         unsafe_allow_html=True,
     )
     current_selected = st.session_state.get("selected_repository", "")
-
     options = [""] + sorted(discovered_repos)
-    default_idx = 0
-    if current_selected in options and current_selected != "":
-        default_idx = options.index(current_selected)
-    elif len(options) > 1:
-        default_idx = 1
-        current_selected = options[1]
-        st.session_state["selected_repository"] = current_selected
+    default_idx = options.index(current_selected) if current_selected in options else 0
 
     if current_selected in options:
         st.session_state["sidebar_repo_selectbox"] = current_selected
