@@ -1768,6 +1768,10 @@ def main() -> None:
         st.rerun()
 
     selected_repository = st.session_state.get("selected_repository", "")
+    st.write("DEBUG selected_repository:", selected_repository)
+    st.write("DEBUG session_state:", dict(st.session_state))
+    st.write("DEBUG discovered_repos:", discovered_repos)
+
 
     if analyze_button:
         try:
