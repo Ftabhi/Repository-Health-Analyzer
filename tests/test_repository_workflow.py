@@ -623,3 +623,37 @@ def test_render_dashboard_for_repository_displays_warning_on_empty_data(monkeypa
     assert len(warning_messages) == 1
     assert "nonexistent/repo" in warning_messages[0]
 
+
+def test_render_sidebar_quick_examples_trigger_analysis(monkeypatch) -> None:
+    """Verify that clicking a Quick Example button returns the example URL and sets analyze_button to True."""
+    import streamlit as st
+    from dashboard.sidebar import render_sidebar, _QUICK_EXAMPLES
+
+    # Mock sidebar button so that the first example button returns True
+    def mock_button(label, key=None, **kwargs):
+        if key == "btn_example_0":
+            return True
+        return False
+
+    # Create mock columns
+    class MockColumn:
+        def button(self, label, key=None, **kwargs):
+            return mock_button(label, key=key, **kwargs)
+
+    cols = [MockColumn(), MockColumn()]
+    monkeypatch.setattr(st.sidebar, "columns", lambda spec: cols)
+    monkeypatch.setattr(st.sidebar, "button", mock_button)
+    monkeypatch.setattr(st.sidebar, "text_input", lambda label, **kwargs: "")
+    monkeypatch.setattr(st.sidebar, "selectbox", lambda label, options, **kwargs: options[0])
+
+    session_state = {}
+    monkeypatch.setattr(st, "session_state", session_state)
+
+    repo_url, analyze_btn, selected_repo = render_sidebar([])
+
+    expected_url = _QUICK_EXAMPLES[0][1]
+    assert repo_url == expected_url
+    assert analyze_btn is True
+    assert session_state.get("repository_url_input") == expected_url
+
+

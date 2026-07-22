@@ -230,14 +230,14 @@ def _configure_page() -> None:
         }
 
         /* Primary / analyze button */
-        .stButton > button[kind="secondary"],
-        .stButton > button:first-child {
+        .stButton > button[kind="primary"],
+        button[data-testid="baseButton-primary"] {
             background: linear-gradient(180deg, #2E5FA3 0%, #1F6FEB 100%) !important;
             color: #FFFFFF !important;
             border-color: rgba(255,255,255,0.1) !important;
         }
-        .stButton > button[kind="secondary"]:hover,
-        .stButton > button:first-child:hover {
+        .stButton > button[kind="primary"]:hover,
+        button[data-testid="baseButton-primary"]:hover {
             box-shadow: 0 0 20px rgba(31,111,235,0.4) !important;
             border-color: var(--accent-color) !important;
         }
