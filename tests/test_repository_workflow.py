@@ -566,8 +566,6 @@ def test_main_session_state_updates_after_analysis(monkeypatch) -> None:
 
     assert rerun_called is True
     assert session_state.get("selected_repository") == "pallets/flask"
-    assert session_state.get("sidebar_repo_selectbox") == "pallets/flask"
-    assert session_state.get("repository_url_input") == ""
 
     # Second case: Analysis fails
     def mock_render_sidebar_fail(discovered_repos):
@@ -583,9 +581,8 @@ def test_main_session_state_updates_after_analysis(monkeypatch) -> None:
     rerun_called = False
     main()
 
-    # Should clear selectbox selection state and selected_repository on failure
+    # Should clear selected_repository on failure
     assert session_state.get("selected_repository") == ""
-    assert session_state.get("sidebar_repo_selectbox") == ""
 
 
 def test_discover_repositories_handles_naming_mismatch(tmp_path, monkeypatch) -> None:

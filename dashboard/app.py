@@ -1784,7 +1784,6 @@ def main() -> None:
     # Sync selectbox change to session state and trigger rerun
     if selected_repo != st.session_state.get("selected_repository", ""):
         st.session_state["selected_repository"] = selected_repo
-        st.session_state["sidebar_repo_selectbox"] = selected_repo
         st.rerun()
 
     selected_repository = st.session_state.get("selected_repository", "")
@@ -1793,8 +1792,6 @@ def main() -> None:
         try:
             selected_repository = _analyze_repository(repository_url, stage_container)
             st.session_state["selected_repository"] = selected_repository
-            st.session_state["sidebar_repo_selectbox"] = selected_repository
-            st.session_state["repository_url_input"] = ""
 
             st.cache_data.clear()
             st.success(f"✓ Analysis complete for {selected_repository}.")
@@ -1806,7 +1803,6 @@ def main() -> None:
             st.error(str(exc))
             selected_repository = ""
             st.session_state["selected_repository"] = ""
-            st.session_state["sidebar_repo_selectbox"] = ""
 
         except GitHubNotFoundError as exc:
             logger.warning("Repository not found on GitHub for URL '%s': %s", repository_url, exc)
@@ -1814,7 +1810,6 @@ def main() -> None:
             st.error("Repository not found on GitHub. Please verify the URL.")
             selected_repository = ""
             st.session_state["selected_repository"] = ""
-            st.session_state["sidebar_repo_selectbox"] = ""
 
         except GitHubRateLimitError as exc:
             logger.error("GitHub API rate limit reached: %s", exc)
@@ -1822,7 +1817,6 @@ def main() -> None:
             st.error("GitHub API rate limit reached. Please wait and try again.")
             selected_repository = ""
             st.session_state["selected_repository"] = ""
-            st.session_state["sidebar_repo_selectbox"] = ""
 
         except GitHubPrivateRepositoryError as exc:
             logger.warning("Private or inaccessible repository: %s", exc)
@@ -1830,7 +1824,6 @@ def main() -> None:
             st.error("Unable to access repository. It may be private or require different credentials.")
             selected_repository = ""
             st.session_state["selected_repository"] = ""
-            st.session_state["sidebar_repo_selectbox"] = ""
 
         except GitHubAPIError as exc:
             logger.error("GitHub API error: %s", exc)
@@ -1838,7 +1831,6 @@ def main() -> None:
             st.error(f"GitHub API error: {exc}")
             selected_repository = ""
             st.session_state["selected_repository"] = ""
-            st.session_state["sidebar_repo_selectbox"] = ""
 
         except (DataStorageError, DataCleaningError, AnalyticsError, HealthScoreError) as exc:
             logger.error("Repository analysis failed: %s", exc)
@@ -1846,7 +1838,6 @@ def main() -> None:
             st.error(f"Repository analysis failed: {exc}")
             selected_repository = ""
             st.session_state["selected_repository"] = ""
-            st.session_state["sidebar_repo_selectbox"] = ""
 
     if selected_repository:
         with st.spinner("Loading analytics…"):
