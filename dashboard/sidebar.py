@@ -39,11 +39,15 @@ def render_sidebar(discovered_repos: List[str]) -> Tuple[str, bool, str]:
 
     options = [""] + sorted(discovered_repos)
     default_idx = 0
-    if current_selected in options:
+    if current_selected in options and current_selected != "":
         default_idx = options.index(current_selected)
     elif len(options) > 1:
         default_idx = 1
-        st.session_state["selected_repository"] = options[1]
+        current_selected = options[1]
+        st.session_state["selected_repository"] = current_selected
+
+    if current_selected in options:
+        st.session_state["sidebar_repo_selectbox"] = current_selected
 
     selected_repo = st.sidebar.selectbox(
         "Select an analyzed repository",

@@ -4,6 +4,7 @@ from html import escape
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlparse
+import logging
 import re
 import sys
 
@@ -13,6 +14,8 @@ if str(ROOT_DIR) not in sys.path:
 
 import pandas as pd
 import streamlit as st
+
+logger = logging.getLogger(__name__)
 
 from dashboard.exports import export_to_csv, export_to_json, export_to_pdf
 from dashboard.insights import generate_engineering_insights
@@ -1075,20 +1078,27 @@ def _configure_page() -> None:
     )
 
 
-@st.cache_data
 def _discover_repositories() -> List[str]:
     """Discover repository options from processed repository CSV files."""
     if not PROCESSED_DIR.exists():
+        logger.warning("_discover_repositories: PROCESSED_DIR %s does not exist", PROCESSED_DIR)
         return []
 
     repositories: List[str] = []
     for path in sorted(PROCESSED_DIR.glob(f"*{REPOSITORY_SUFFIX}")):
         try:
+            prefix = path.name[:-len(REPOSITORY_SUFFIX)]
             df = pd.read_csv(path, nrows=1)
             full_name = df.loc[0, "full_name"] if "full_name" in df.columns else None
-            if isinstance(full_name, str) and full_name:
-                repositories.append(full_name)
-        except (ValueError, FileNotFoundError, KeyError):
+            if isinstance(full_name, str) and full_name.strip():
+                candidate_prefix = _format_repository_file_prefix(full_name)
+                if (PROCESSED_DIR / f"{candidate_prefix}{REPOSITORY_SUFFIX}").exists():
+                    repositories.append(full_name)
+                    continue
+            repo_name = prefix.replace("_", "/", 1)
+            repositories.append(repo_name)
+        except Exception as exc:
+            logger.warning("_discover_repositories: failed to read %s: %s", path, exc)
             continue
     return repositories
 
@@ -1126,11 +1136,13 @@ def _load_dataframe(file_name: str, parse_dates: Optional[List[str]] = None) -> 
     """Load a processed CSV file into a DataFrame."""
     file_path = PROCESSED_DIR / file_name
     if not file_path.exists():
+        logger.warning("_load_dataframe: file does not exist: %s", file_path)
         return pd.DataFrame()
 
     try:
         return pd.read_csv(file_path, parse_dates=parse_dates or [])
-    except (ValueError, FileNotFoundError):
+    except Exception as exc:
+        logger.error("_load_dataframe: failed to parse CSV %s: %s", file_path, exc)
         return pd.DataFrame()
 
 
@@ -1695,6 +1707,13 @@ def _load_processed_data(repository: str) -> Tuple[Dict[str, pd.DataFrame], Dict
 
 def _render_dashboard_for_repository(repository: str) -> None:
     repository_data, metrics = _load_processed_data(repository)
+    if repository_data["repository_df"].empty:
+        logger.warning("_render_dashboard_for_repository: repository_df is empty for %s", repository)
+        st.warning(
+            f"⚠️ Processed data for repository '{repository}' could not be loaded or is empty. "
+            "Please analyze the repository using the sidebar or select a different repository."
+        )
+        return
     repository_overview = _build_repository_overview(repository_data["repository_df"])
     chart_data = _build_chart_data(repository_data, metrics)
     dashboard_insights = generate_engineering_insights(metrics)
@@ -1765,70 +1784,76 @@ def main() -> None:
     # Sync selectbox change to session state and trigger rerun
     if selected_repo != st.session_state.get("selected_repository", ""):
         st.session_state["selected_repository"] = selected_repo
+        st.session_state["sidebar_repo_selectbox"] = selected_repo
         st.rerun()
 
     selected_repository = st.session_state.get("selected_repository", "")
-    st.write("DEBUG selected_repository:", selected_repository)
-    st.write("DEBUG session_state:", dict(st.session_state))
-    st.write("DEBUG discovered_repos:", discovered_repos)
-
 
     if analyze_button:
         try:
             selected_repository = _analyze_repository(repository_url, stage_container)
             st.session_state["selected_repository"] = selected_repository
+            st.session_state["sidebar_repo_selectbox"] = selected_repository
+            st.session_state["repository_url_input"] = ""
 
             st.cache_data.clear()
             st.success(f"✓ Analysis complete for {selected_repository}.")
             st.rerun()
 
         except ValueError as exc:
+            logger.warning("Validation failed for repository URL '%s': %s", repository_url, exc)
             _reset_stage_statuses(stage_container, "Validating repository", "failed")
             st.error(str(exc))
             selected_repository = ""
-            st.session_state.pop("selected_repository", None)
-            st.session_state.pop("sidebar_repo_selectbox", None)
+            st.session_state["selected_repository"] = ""
+            st.session_state["sidebar_repo_selectbox"] = ""
 
-        except GitHubNotFoundError:
+        except GitHubNotFoundError as exc:
+            logger.warning("Repository not found on GitHub for URL '%s': %s", repository_url, exc)
             _reset_stage_statuses(stage_container, "Validating repository", "failed")
             st.error("Repository not found on GitHub. Please verify the URL.")
             selected_repository = ""
-            st.session_state.pop("selected_repository", None)
-            st.session_state.pop("sidebar_repo_selectbox", None)
+            st.session_state["selected_repository"] = ""
+            st.session_state["sidebar_repo_selectbox"] = ""
 
-        except GitHubRateLimitError:
+        except GitHubRateLimitError as exc:
+            logger.error("GitHub API rate limit reached: %s", exc)
             _reset_stage_statuses(stage_container, "Fetching repository metadata", "failed")
             st.error("GitHub API rate limit reached. Please wait and try again.")
             selected_repository = ""
-            st.session_state.pop("selected_repository", None)
-            st.session_state.pop("sidebar_repo_selectbox", None)
+            st.session_state["selected_repository"] = ""
+            st.session_state["sidebar_repo_selectbox"] = ""
 
-        except GitHubPrivateRepositoryError:
+        except GitHubPrivateRepositoryError as exc:
+            logger.warning("Private or inaccessible repository: %s", exc)
             _reset_stage_statuses(stage_container, "Fetching repository metadata", "failed")
             st.error("Unable to access repository. It may be private or require different credentials.")
             selected_repository = ""
-            st.session_state.pop("selected_repository", None)
-            st.session_state.pop("sidebar_repo_selectbox", None)
+            st.session_state["selected_repository"] = ""
+            st.session_state["sidebar_repo_selectbox"] = ""
 
         except GitHubAPIError as exc:
+            logger.error("GitHub API error: %s", exc)
             _reset_stage_statuses(stage_container, "Fetching repository metadata", "failed")
             st.error(f"GitHub API error: {exc}")
             selected_repository = ""
-            st.session_state.pop("selected_repository", None)
-            st.session_state.pop("sidebar_repo_selectbox", None)
+            st.session_state["selected_repository"] = ""
+            st.session_state["sidebar_repo_selectbox"] = ""
 
         except (DataStorageError, DataCleaningError, AnalyticsError, HealthScoreError) as exc:
+            logger.error("Repository analysis failed: %s", exc)
             _reset_stage_statuses(stage_container, "Running analytics", "failed")
             st.error(f"Repository analysis failed: {exc}")
             selected_repository = ""
-            st.session_state.pop("selected_repository", None)
-            st.session_state.pop("sidebar_repo_selectbox", None)
+            st.session_state["selected_repository"] = ""
+            st.session_state["sidebar_repo_selectbox"] = ""
 
     if selected_repository:
         with st.spinner("Loading analytics…"):
             try:
                 _render_dashboard_for_repository(selected_repository)
             except Exception as exc:
+                logger.error("Unable to render dashboard for %s: %s", selected_repository, exc, exc_info=True)
                 st.error(f"Unable to render dashboard: {exc}")
     else:
         st.markdown(

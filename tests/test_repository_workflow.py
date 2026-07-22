@@ -586,3 +586,43 @@ def test_main_session_state_updates_after_analysis(monkeypatch) -> None:
     # Should clear selectbox selection state and selected_repository on failure
     assert session_state.get("selected_repository") == ""
     assert session_state.get("sidebar_repo_selectbox") == ""
+
+
+def test_discover_repositories_handles_naming_mismatch(tmp_path, monkeypatch) -> None:
+    """Verify that _discover_repositories maps files to valid on-disk filenames even when full_name differs."""
+    from dashboard.app import _discover_repositories, REPOSITORY_SUFFIX
+    import pandas as pd
+
+    processed_dir = tmp_path / "processed"
+    processed_dir.mkdir(parents=True, exist_ok=True)
+
+    # File facebook_react_repository.csv contains full_name = 'react/react'
+    df = pd.DataFrame([{"full_name": "react/react", "repository_name": "react"}])
+    df.to_csv(processed_dir / f"facebook_react{REPOSITORY_SUFFIX}", index=False)
+
+    monkeypatch.setattr("dashboard.app.PROCESSED_DIR", processed_dir)
+
+    repos = _discover_repositories()
+    assert repos == ["facebook/react"]
+
+
+def test_render_dashboard_for_repository_displays_warning_on_empty_data(monkeypatch) -> None:
+    """Verify that _render_dashboard_for_repository renders a warning when repository_df is empty."""
+    import streamlit as st
+    import pandas as pd
+    from dashboard.app import _render_dashboard_for_repository
+
+    warning_messages = []
+    monkeypatch.setattr(st, "warning", lambda msg: warning_messages.append(msg))
+    monkeypatch.setattr(
+        "dashboard.app._load_processed_data",
+        lambda repo: (
+            {"repository_df": pd.DataFrame()},
+            {},
+        ),
+    )
+
+    _render_dashboard_for_repository("nonexistent/repo")
+    assert len(warning_messages) == 1
+    assert "nonexistent/repo" in warning_messages[0]
+
